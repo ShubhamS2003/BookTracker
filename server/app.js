@@ -180,6 +180,8 @@ app.get('/books/:id/reading', async(req, res) => {
   }
 });
 
+// Comments
+
 // Signup
 
 app.post('/signup', async(req, res) => {
