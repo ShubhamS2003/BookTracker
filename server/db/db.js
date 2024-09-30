@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: '../.env' });
 const { neon } = require('@neondatabase/serverless');
 const { PGHOST, PGDATABASE, PGUSER, PGPASSWORD, API_KEY} = process.env;
 const sql = neon(`postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}/${PGDATABASE}?sslmode=require`);

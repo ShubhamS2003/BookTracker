@@ -1,102 +1,20 @@
-require('dotenv').config();
+require('dotenv').config({ path: './.env'});
 const express = require('express');
 const axios = require('axios');
+const userRoutes = require('./routes/userRoutes');
+const bookRoutes = require('./routes/bookRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
 
-const { neon } = require('@neondatabase/serverless');
+
 const app = express();
-
-const { PGHOST, PGDATABASE, PGUSER, PGPASSWORD, API_KEY } = process.env;
-
-const sql = neon(`postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}/${PGDATABASE}?sslmode=require`);
 
 app.use(express.json());
 
-// Search books by genre
+app.use('/api/v1/users', userRoutes);
 
-app.get('/searchBooks_genre', async(req, res) =>{
-  const { genre } = req.query;
-  const url = `https://www.googleapis.com/books/v1/volumes?q=subject:${encodeURIComponent(genre)}&key=${API_KEY}`;
+app.use('/api/v1/books', bookRoutes);
 
-  try{
-    const response = await axios.get(url);
-    const items = response.data.items;
-    
-    const books = items.map(item => {
-      const volume = item.volumeInfo;
-      return {
-         id: item.id,
-         title: volume.title,
-         thumbnail: volume.imageLinks.thumbnail,
-         publish_date: volume.publishedDate,
-         description: volume.description,
-         author: volume.authors
-      };
-    });
-    res.json({ books });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch books' });
-  }
-});
-
-// Search books by title
-
-app.get('/searchBooks_title', async(req, res) => {
-  const { title } = req.query;
-  const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(title)}&key=${API_KEY}`;
-
-  try{
-    const response = await axios.get(url);
-    const items = response.data.items;
-    // console.log(items.id);
-
-    const books = items.map(item => {
-      const volume = item.volumeInfo;
-      // console.log(volume);
-      return {
-         id: item.id,
-         title: volume.title,
-         thumbnail: volume.imageLinks.thumbnail,
-         publish_date: volume.publishedDate,
-         description: volume.description,
-         author: volume.authors
-      };
-    });
-    res.json({ books });
-  } catch {
-    res.status(500).json({ error: 'Failed to fetch books' });
-  }
-});
-
-// Save the books you would like to read
-
-app.post('/saveBooks', async(req, res) => {
-  const {book_id, title, author, description, publish_date, thumbnail, user_id} = req.body;
-
-  try{
-    const result = await sql `INSERT INTO savedbooks (book_id, title, author, description, publish_date, thumbnail, user_id) VALUES (${book_id}, ${title}, ${author}, ${description}, ${publish_date}, ${thumbnail}, ${user_id}) RETURNING *`;
-    res.status(201).json({message: "Book saved successfully", details: result[0]});
-  } catch (err) {
-    console.error("Error saving the book: ", err);
-    res.status(500).json({ error: "Internal server error"});
-  }
-})
-
-app.get('/saveBooks', async(req, res) => {
-  const { user_id } = req.body;
-
-  try {
-    const books = await sql ` SELECT * FROM savedbooks WHERE user_id = ${user_id}`;
-    if(books.length === 0) {
-      return res.status(404).json({message: "No books found"});
-    } 
-    res.json({message: books});
-  } catch(err){
-    console.error(err);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// Mark the book as your favorite
+app.use('/api/v1/books', reviewRoutes);
 
 app.put('/books/:id/favorite', async (req, res) => {
   const { id } = req.params;  
